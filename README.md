@@ -111,12 +111,12 @@ ia/
 1. **Instalar**: Sigue [`QUICK_START.md`](QUICK_START.md)
 2. **Configurar APIs**: Lee [`API_KEYS_GUIDE.md`](plant-care-ai-backend/docs/API_KEYS_GUIDE.md)
 3. **Ejecutar Backend**: `python main.py`
-4. **Ejecutar App**: `npm start`
+4. **Ejecutar App**: `npm start (si el npm falla, abre el html directamente desde el directorio, y corre el backend.)`
 5. **Probar**: Toma foto de una planta! 🌱
 
 ## 👨‍💻 Equipo
 
-- [Tu Nombre] - Desarrollo Full Stack
+- Tomas Mejia, Johan Gomez - Desarrollo Full Stack
 
 ## 📄 Licencia
 
