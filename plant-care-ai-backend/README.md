@@ -23,20 +23,31 @@ PlantCare AI es una aplicación móvil multiplataforma (iOS/Android) que utiliza
 
 ## 🎓 Cumplimiento de Requisitos del Curso
 
-Este proyecto integra todos los componentes esenciales aprendidos:
+Este proyecto integra todos los componentes esenciales aprendidos y **funciona completamente SIN depender de Gemini**:
 
-- ✅ **Extracción de datos**: Módulo que lee documentos de cuidado de plantas
-- ✅ **Chunking**: Segmentación inteligente de textos (chunks de 400 caracteres con overlap)
-- ✅ **Embeddings**: Vectorización con `sentence-transformers` (all-MiniLM-L6-v2)
-- ✅ **Similitud**: Búsqueda por similitud del coseno
-- ✅ **Base de datos vectorial**: Supabase con extensión pgvector
+### Componentes Básicos (Sin Gemini):
+- ✅ **Extracción de datos**: `src/extraccion.py` - Lectura directa de archivos (NO usa Gemini)
+- ✅ **Chunking**: `src/chunking.py` - Segmentación propia (chunks de 400 caracteres con overlap) (NO usa Gemini)
+- ✅ **Embeddings**: `src/embeddings.py` - Vectorización con `sentence-transformers` open source (NO usa Gemini)
+- ✅ **Similitud**: `src/similitud.py` - Búsqueda por similitud del coseno con numpy (NO usa Gemini)
+- ✅ **Base de datos vectorial**: `src/vector_db.py` - Supabase con extensión pgvector (NO usa Gemini)
+
+### Arquitectura Multiagente:
 - ✅ **Arquitectura multi-agente con LangChain**:
-  - **Agente de Visión**: Google Gemini Vision + Plant.id API
-  - **Agente de Conocimiento**: Búsqueda vectorial en Supabase
-  - **Agente de Análisis**: Diagnóstico basado en síntomas
-  - **Agente de Respuesta**: Orquestador LangChain + generación con Gemini
-- ✅ **Interfaz interactiva**: React Native con Expo
+  - **Agente de Conocimiento**: Búsqueda vectorial usando embeddings y similitud del coseno
+  - **Agente de Análisis**: Diagnóstico basado en síntomas (lógica propia)
+  - **Agente de Respuesta**: Orquestador LangChain con `AgentExecutor`, `Tools`, `ChatPromptTemplate`
+  - **Agente de Visión**: Opcional, usa Gemini Vision (puede deshabilitarse)
+
+### Nota Importante:
+- **Gemini es OPCIONAL**: El sistema tiene un modo de fallback que funciona completamente sin LLM, usando solo los documentos encontrados por búsqueda vectorial
+- **Todos los componentes básicos funcionan independientemente**: Extracción, chunking, embeddings, similitud y BD vectorial NO requieren Gemini
+- **Ver prueba**: Ejecuta `python test_sin_gemini.py` para demostrar que funciona sin Gemini
+
+- ✅ **Interfaz interactiva**: HTML/CSS/JS básico
 - ✅ **Repositorio en GitHub**: Código organizado y documentado
+
+**Ver documentación completa**: `docs/CUMPLIMIENTO_REQUISITOS.md`
 
 ## 🏗️ Arquitectura del Sistema
 

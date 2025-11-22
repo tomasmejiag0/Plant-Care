@@ -21,8 +21,47 @@ class VisionAgent:
         gemini_key = os.getenv("GEMINI_API_KEY")
         if gemini_key:
             genai.configure(api_key=gemini_key)
-            self.gemini_model = genai.GenerativeModel('gemini-1.5-pro')
-            print("✓ Gemini Vision inicializado")
+            # Listar modelos disponibles y usar el primero disponible
+            try:
+                available_models = [model.name for model in genai.list_models() 
+                                  if 'generateContent' in model.supported_generation_methods]
+                
+                # Intentar modelos en orden de preferencia
+                model_names = ['models/gemini-pro', 'models/gemini-1.5-pro', 'models/gemini-1.5-flash', 'gemini-pro']
+                self.gemini_model = None
+                
+                for model_name in model_names:
+                    # Verificar si el modelo está disponible
+                    if any(model_name.replace('models/', '') in m or m.endswith(model_name.replace('models/', '')) for m in available_models):
+                        try:
+                            self.gemini_model = genai.GenerativeModel(model_name.replace('models/', ''))
+                            print(f"✓ Gemini Vision ({model_name}) inicializado")
+                            break
+                        except Exception as e:
+                            continue
+                
+                if not self.gemini_model:
+                    # Último intento con el primer modelo disponible
+                    if available_models:
+                        try:
+                            first_model = available_models[0].split('/')[-1]
+                            self.gemini_model = genai.GenerativeModel(first_model)
+                            print(f"✓ Gemini Vision ({first_model}) inicializado")
+                        except Exception as e:
+                            print(f"⚠ Error configurando Gemini Vision: {e}")
+                            self.gemini_model = None
+                    else:
+                        print("⚠ No se encontraron modelos disponibles para Vision")
+                        self.gemini_model = None
+            except Exception as e:
+                print(f"⚠ Error listando modelos de Gemini: {e}")
+                # Fallback: intentar gemini-pro directamente
+                try:
+                    self.gemini_model = genai.GenerativeModel('gemini-pro')
+                    print("✓ Gemini Vision (gemini-pro) inicializado (fallback)")
+                except Exception as e2:
+                    print(f"⚠ Error configurando Gemini Vision: {e2}")
+                    self.gemini_model = None
         else:
             self.gemini_model = None
             print("⚠ GEMINI_API_KEY no encontrada")
@@ -34,7 +73,7 @@ class VisionAgent:
     
     def identify_plant_species(self, image_path: str) -> Optional[Dict]:
         """
-        Identifica la especie de planta usando Plant.id API
+        Identifica la especie de planta usando Plant.id API o Gemini Vision como fallback
         
         Args:
             image_path: Ruta a la imagen
@@ -42,39 +81,99 @@ class VisionAgent:
         Returns:
             Diccionario con especie y probabilidad
         """
-        if not self.plant_id_key:
-            return None
-        
-        try:
-            # Leer y codificar imagen
-            with open(image_path, 'rb') as f:
-                image_data = base64.b64encode(f.read()).decode('utf-8')
-            
-            # Llamada a Plant.id API
-            url = "https://api.plant.id/v2/identify"
-            headers = {
-                "Content-Type": "application/json",
-                "Api-Key": self.plant_id_key
-            }
-            data = {
-                "images": [f"data:image/jpeg;base64,{image_data}"],
-                "modifiers": ["similar_images"],
-                "plant_details": ["common_names", "taxonomy", "url"]
-            }
-            
-            response = requests.post(url, json=data, headers=headers)
-            result = response.json()
-            
-            if 'suggestions' in result and len(result['suggestions']) > 0:
-                top_match = result['suggestions'][0]
-                return {
-                    'species': top_match.get('plant_name', 'Desconocida'),
-                    'probability': top_match.get('probability', 0),
-                    'common_names': top_match.get('plant_details', {}).get('common_names', [])
+        # Intentar primero con Plant.id API si está disponible
+        if self.plant_id_key:
+            try:
+                print("  🔍 Identificando especie con Plant.id API...")
+                # Leer y codificar imagen
+                with open(image_path, 'rb') as f:
+                    image_data = base64.b64encode(f.read()).decode('utf-8')
+                
+                # Llamada a Plant.id API
+                url = "https://api.plant.id/v2/identify"
+                headers = {
+                    "Content-Type": "application/json",
+                    "Api-Key": self.plant_id_key
                 }
-        except Exception as e:
-            print(f"Error en Plant.id API: {e}")
+                data = {
+                    "images": [f"data:image/jpeg;base64,{image_data}"],
+                    "modifiers": ["similar_images"],
+                    "plant_details": ["common_names", "taxonomy", "url"]
+                }
+                
+                response = requests.post(url, json=data, headers=headers, timeout=10)
+                response.raise_for_status()
+                result = response.json()
+                
+                if 'suggestions' in result and len(result['suggestions']) > 0:
+                    top_match = result['suggestions'][0]
+                    species_name = top_match.get('plant_name', 'Desconocida')
+                    probability = top_match.get('probability', 0)
+                    common_names = top_match.get('plant_details', {}).get('common_names', [])
+                    
+                    print(f"  ✓ Plant.id identificó: {species_name} (confianza: {probability:.0%})")
+                    
+                    return {
+                        'species': species_name,
+                        'probability': probability,
+                        'common_names': common_names
+                    }
+                else:
+                    print("  ⚠ Plant.id no encontró sugerencias")
+            except requests.exceptions.RequestException as e:
+                print(f"  ⚠ Error en Plant.id API (HTTP): {e}")
+            except Exception as e:
+                print(f"  ⚠ Error en Plant.id API: {e}")
+        else:
+            print("  ⚠ PLANT_ID_API_KEY no configurada")
         
+        # Fallback: usar Gemini Vision para identificar la planta
+        if self.gemini_model:
+            try:
+                print("  🔍 Intentando identificación con Gemini Vision...")
+                from PIL import Image
+                img = Image.open(image_path)
+                
+                prompt = """Identifica la especie de esta planta. Responde SOLO con el nombre científico (género y especie) o el nombre común más conocido si no conoces el científico.
+
+Formato de respuesta:
+ESPECIE: [nombre científico o común]
+CONFIANZA: [alto/medio/bajo]
+
+Si no puedes identificar la planta, responde:
+ESPECIE: Desconocida
+CONFIANZA: bajo"""
+                
+                response = self.gemini_model.generate_content([prompt, img])
+                analysis_text = response.text
+                
+                # Parsear respuesta
+                species = "Desconocida"
+                confidence = 0.3  # Baja confianza para identificación con Gemini Vision
+                
+                for line in analysis_text.split('\n'):
+                    if line.startswith('ESPECIE:'):
+                        species = line.replace('ESPECIE:', '').strip()
+                    elif line.startswith('CONFIANZA:'):
+                        conf_text = line.replace('CONFIANZA:', '').strip().lower()
+                        if 'alto' in conf_text:
+                            confidence = 0.6
+                        elif 'medio' in conf_text:
+                            confidence = 0.4
+                        else:
+                            confidence = 0.3
+                
+                if species and species != "Desconocida":
+                    print(f"  ✓ Gemini Vision identificó: {species} (confianza estimada: {confidence:.0%})")
+                    return {
+                        'species': species,
+                        'probability': confidence,
+                        'common_names': []
+                    }
+            except Exception as e:
+                print(f"  ⚠ Error en identificación con Gemini Vision: {e}")
+        
+        print("  ⚠ No se pudo identificar la especie")
         return None
     
     def analyze_plant_health(self, image_path: str, user_actions: str = "") -> Dict:
@@ -187,7 +286,7 @@ OBSERVACIONES: [detalles visuales]"""
             **health_info
         }
         
-        print(f"  ✓ Especie identificada: {result['species']}")
+        print(f"  ✓ Especie identificada: {result['species']} (confianza: {result['species_probability']:.0%})")
         print(f"  ✓ Estado de salud: {result['health_status']} ({result['health_score']}/10)")
         
         return result

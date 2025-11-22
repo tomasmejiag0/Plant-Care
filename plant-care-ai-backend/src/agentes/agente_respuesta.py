@@ -38,31 +38,79 @@ class ResponseAgent:
         gemini_key = os.getenv("GEMINI_API_KEY")
         if gemini_key:
             genai.configure(api_key=gemini_key)
-            self.llm = genai.GenerativeModel('gemini-1.5-pro')
-            print("✓ Gemini LLM configurado para respuesta final")
+            # Listar modelos disponibles y usar el primero disponible
+            self.llm = None
+            try:
+                available_models = []
+                for model in genai.list_models():
+                    if 'generateContent' in model.supported_generation_methods:
+                        model_name = model.name.split('/')[-1]  # Extraer solo el nombre
+                        available_models.append(model_name)
+                
+                if available_models:
+                    print(f"📋 Modelos Gemini disponibles: {', '.join(available_models)}")
+                    
+                    # Intentar modelos en orden de preferencia (evitar modelos exp/preview que tienen cuota limitada)
+                    preferred_models = ['gemini-pro', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+                    
+                    # Filtrar modelos disponibles para excluir exp/preview/experimental
+                    stable_models = [m for m in available_models if not any(x in m.lower() for x in ['exp', 'preview', 'experimental', 'thinking'])]
+                    
+                    for model_name in preferred_models:
+                        if model_name in stable_models:
+                            try:
+                                self.llm = genai.GenerativeModel(model_name)
+                                print(f"✓ Gemini LLM ({model_name}) configurado para respuesta final")
+                                break
+                            except Exception as e:
+                                print(f"⚠ Error probando {model_name}: {e}")
+                                continue
+                    
+                    # Si ninguno funcionó, intentar el primer modelo estable disponible
+                    if not self.llm and stable_models:
+                        try:
+                            first_stable = stable_models[0]
+                            self.llm = genai.GenerativeModel(first_stable)
+                            print(f"✓ Gemini LLM ({first_stable}) configurado para respuesta final")
+                        except Exception as e:
+                            print(f"⚠ Error configurando Gemini LLM con {first_stable}: {e}")
+                            self.llm = None
+                    elif not self.llm:
+                        print("⚠ No hay modelos estables disponibles (solo exp/preview)")
+                        self.llm = None
+                else:
+                    print("⚠ No se encontraron modelos Gemini disponibles")
+                    self.llm = None
+            except Exception as e:
+                print(f"⚠ Error listando modelos de Gemini: {e}")
+                print("   El sistema funcionará sin LLM, usando solo documentos de Supabase")
+                self.llm = None
         else:
             self.llm = None
-            print("⚠ GEMINI_API_KEY no encontrada - respuestas limitadas")
+            print("⚠ GEMINI_API_KEY no encontrada - respuestas limitadas (sin LLM)")
         
         print("✓ Sistema Multi-Agente listo\n")
     
-    def generate_recommendations(self, analysis_result: Dict, context: str) -> list:
+    def generate_recommendations(self, analysis_result: Dict, context: str, user_question: str = "") -> list:
         """
         Genera recomendaciones usando el LLM
         
         Args:
             analysis_result: Resultado del análisis
             context: Contexto del knowledge agent
+            user_question: Pregunta o preocupación específica del usuario
             
         Returns:
             Lista de recomendaciones
         """
         if not self.llm:
             # Recomendaciones predeterminadas sin LLM
-            return self._get_default_recommendations(analysis_result)
+            return self._get_default_recommendations(analysis_result, user_question)
         
         try:
             # Construir prompt para recomendaciones
+            user_context = f"\n\nPREGUNTA/PRECUPACIÓN DEL USUARIO:\n{user_question}" if user_question else ""
+            
             prompt = f"""Eres un experto en cuidado de plantas. Basándote en el siguiente análisis, 
 genera 3-5 recomendaciones específicas y accionables para mejorar la salud de la planta.
 
@@ -72,16 +120,21 @@ ANÁLISIS:
 - Diagnóstico: {analysis_result.get('diagnosis')}
 - Problemas visuales: {', '.join(analysis_result.get('visual_problems', []))}
 - Problemas identificados: {analysis_result.get('identified_issues', [])}
+{user_context}
 
 CONOCIMIENTO RELEVANTE:
 {context[:500]}
 
+IMPORTANTE: Si el usuario menciona una preocupación específica (como "arranqué una hoja", "creo que la maté", etc.), 
+DEBES abordar esa preocupación directamente en las recomendaciones. Tranquiliza al usuario y proporciona 
+consejos específicos sobre cómo manejar la situación.
+
 Genera recomendaciones en el siguiente formato:
-1. [Recomendación específica]
+1. [Recomendación específica que aborde la preocupación del usuario si existe]
 2. [Recomendación específica]
 ...
 
-Sé conciso, práctico y específico."""
+Sé conciso, práctico, específico y empático."""
 
             response = self.llm.generate_content(prompt)
             recommendations_text = response.text
@@ -100,11 +153,24 @@ Sé conciso, práctico y específico."""
             
         except Exception as e:
             print(f"Error generando recomendaciones con LLM: {e}")
-            return self._get_default_recommendations(analysis_result)
+            return self._get_default_recommendations(analysis_result, user_question)
     
-    def _get_default_recommendations(self, analysis_result: Dict) -> list:
+    def _get_default_recommendations(self, analysis_result: Dict, user_question: str = "") -> list:
         """Recomendaciones predeterminadas sin LLM"""
         recommendations = []
+        
+        # Si el usuario menciona preocupaciones específicas, abordarlas primero
+        user_lower = user_question.lower() if user_question else ""
+        
+        if "arranqué" in user_lower or "arranque" in user_lower or "hoja" in user_lower:
+            recommendations.append("No te preocupes, arrancar una hoja accidentalmente generalmente no mata la planta. La mayoría de las plantas pueden recuperarse de esto.")
+            recommendations.append("Si la herida es grande, puedes aplicar canela en polvo o carbón activado en el área cortada para prevenir infecciones.")
+            recommendations.append("Mantén la planta en condiciones normales y observa si aparecen signos de estrés. La mayoría de las plantas se recuperan solas.")
+        
+        if "maté" in user_lower or "mate" in user_lower or "muerte" in user_lower:
+            recommendations.append("Es poco probable que la planta esté muerta por un solo incidente. Las plantas son más resistentes de lo que parecen.")
+            recommendations.append("Observa la planta durante los próximos días. Si las hojas se mantienen verdes y firmes, la planta está bien.")
+            recommendations.append("Si notas que las hojas se marchitan o se vuelven amarillas, puede ser signo de estrés, pero aún es recuperable con los cuidados adecuados.")
         
         issues = analysis_result.get('identified_issues', [])
         
@@ -161,7 +227,8 @@ Sé conciso, práctico y específico."""
             print(f"\n💡 Generando recomendaciones...")
             recommendations = self.generate_recommendations(
                 analysis_result,
-                knowledge_result.get('context', '')
+                knowledge_result.get('context', ''),
+                user_actions  # Pasar la pregunta/preocupación del usuario
             )
             
             # Construir respuesta final

@@ -1,19 +1,36 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 venv/
+env/
 ENV/
-.venv
+*.egg-info/
+dist/
+build/
+
+# Environment variables
 .env
-*.log
-.DS_Store
-*.sqlite3
-.idea/
+.env.local
+
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
+
+# Uploads
 uploads/
-models/
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

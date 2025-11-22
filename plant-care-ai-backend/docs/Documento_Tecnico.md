@@ -139,7 +139,29 @@ similarity = 1 - (embedding <=> query_embedding)
 
 ### 3.5 Arquitectura Multi-Agente con LangChain
 
-#### Agente 1: Vision Agent
+El proyecto implementa una arquitectura multiagente usando **LangChain** como framework de orquestación. LangChain proporciona herramientas para coordinar múltiples agentes especializados mediante `AgentExecutor`, `Tools`, y `Chains`.
+
+#### Implementación con LangChain
+
+**Archivo Principal**: `src/agentes/agente_respuesta_langchain.py`
+
+**Componentes LangChain Utilizados**:
+1. **AgentExecutor**: Orquesta la ejecución de múltiples agentes
+2. **Tools**: Herramientas especializadas que cada agente puede usar
+3. **ChatPromptTemplate**: Templates para prompts estructurados
+4. **ConversationBufferMemory**: Memoria para mantener contexto
+5. **ChatGoogleGenerativeAI**: Integración con Gemini como LLM
+
+**Estructura de Tools (Herramientas)**:
+```python
+tools = [
+    Tool(name="vision_analysis", ...),      # Agente de Visión
+    Tool(name="knowledge_search", ...),      # Agente de Conocimiento  
+    Tool(name="plant_analysis", ...)         # Agente de Análisis
+]
+```
+
+#### Agente 1: Vision Agent (como Tool)
 **Archivo**: `src/agentes/agente_vision.py`
 
 **Responsabilidades**:
@@ -162,7 +184,7 @@ similarity = 1 - (embedding <=> query_embedding)
 }
 ```
 
-#### Agente 2: Knowledge Agent
+#### Agente 2: Knowledge Agent (como Tool)
 **Archivo**: `src/agentes/agente_conocimiento.py`
 
 **Responsabilidades**:
@@ -185,7 +207,7 @@ similarity = 1 - (embedding <=> query_embedding)
 }
 ```
 
-#### Agente 3: Analysis Agent
+#### Agente 3: Analysis Agent (como Tool)
 **Archivo**: `src/agentes/agente_analisis.py`
 
 **Responsabilidades**:
@@ -213,21 +235,54 @@ score_final = score_visual - (problemas × 0.5) - (severidad × 0.3)
 }
 ```
 
-#### Agente 4: Response Agent (Orquestador)
-**Archivo**: `src/agentes/agente_respuesta.py`
+#### Agente 4: Response Agent (Orquestador LangChain)
+**Archivo**: `src/agentes/agente_respuesta_langchain.py`
 
 **Responsabilidades**:
-- Coordinar ejecución secuencial de agentes
-- Generar recomendaciones con Gemini LLM
-- Ensamblar respuesta final estructurada
+- **Orquestar** ejecución usando LangChain `AgentExecutor`
+- **Coordinar** Tools especializados (vision, knowledge, analysis)
+- **Generar** recomendaciones con LangChain LLM (`ChatGoogleGenerativeAI`)
+- **Mantener** contexto con `ConversationBufferMemory`
 
-**Flujo de Orquestación**:
+**Componentes LangChain Utilizados**:
+- `AgentExecutor`: Ejecuta el agente principal
+- `create_structured_chat_agent`: Crea agente estructurado
+- `Tool`: Define herramientas especializadas
+- `ChatPromptTemplate`: Templates para prompts
+- `ConversationBufferMemory`: Memoria conversacional
+
+**Flujo de Orquestación con LangChain**:
+```python
+# 1. Crear Tools (herramientas especializadas)
+tools = [
+    Tool(name="vision_analysis", func=vision_agent.execute, ...),
+    Tool(name="knowledge_search", func=knowledge_agent.search, ...),
+    Tool(name="plant_analysis", func=analysis_agent.execute, ...)
+]
+
+# 2. Crear AgentExecutor
+agent_executor = AgentExecutor(
+    agent=create_structured_chat_agent(llm, tools, prompt),
+    tools=tools,
+    memory=ConversationBufferMemory(),
+    verbose=True
+)
+
+# 3. Ejecutar flujo multiagente
+result = agent_executor.invoke({"input": "Analiza esta planta..."})
 ```
-1. Vision Agent → análisis imagen
-2. Knowledge Agent → búsqueda contexto
-3. Analysis Agent → diagnóstico
-4. Gemini LLM → recomendaciones
-5. Response structuring → JSON final
+
+**Flujo Secuencial**:
+```
+1. AgentExecutor recibe input del usuario
+2. Decide qué Tool usar (vision_analysis)
+3. Vision Agent ejecuta → identifica especie y problemas
+4. AgentExecutor decide usar knowledge_search
+5. Knowledge Agent ejecuta → busca documentos relevantes
+6. AgentExecutor decide usar plant_analysis
+7. Analysis Agent ejecuta → genera diagnóstico
+8. LangChain LLM genera recomendaciones finales
+9. Response estructurado → JSON final
 ```
 
 **Prompt para Recomendaciones**:
