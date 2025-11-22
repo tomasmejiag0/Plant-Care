@@ -1,161 +1,170 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PlantCare AI - Asistente Inteligente</title>
+    <title>PlantCare AI | Cuidado Inteligente de Plantas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-    <!-- Background with animated gradient -->
-    <div class="gradient-bg"></div>
-    
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo-container">
-                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                    <path d="M12 6v6l4 2"/>
-                </svg>
-                <h1 class="logo-text">PlantCare AI</h1>
-            </div>
-            <p class="subtitle">Tu asistente inteligente de cuidado de plantas</p>
-        </header>
+    <!-- Animated Background -->
+    <div class="animated-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
 
-        <!-- Home Section -->
-        <section id="home-section" class="section active">
-            <!-- Feature Cards -->
-            <div class="features-grid">
-                <div class="feature-card" data-delay="0">
-                    <div class="feature-icon">🔍</div>
-                    <h3>Identifica especies</h3>
-                    <p>Reconoce más de 10,000 especies</p>
-                </div>
-                <div class="feature-card" data-delay="100">
-                    <div class="feature-icon">💚</div>
-                    <h3>Evalúa salud</h3>
-                    <p>Análisis detallado del estado</p>
-                </div>
-                <div class="feature-card" data-delay="200">
-                    <div class="feature-icon">💡</div>
-                    <h3>Recomendaciones</h3>
-                    <p>Consejos personalizados</p>
-                </div>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <i class="fa-solid fa-info-circle"></i>
+        <span id="toastMsg">Acción completada</span>
+    </div>
+
+    <!-- Main Container - 3 Column Layout -->
+    <div class="app-container">
+        <!-- Left Sidebar: Categories & Tips -->
+        <aside class="sidebar-left glass-panel">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-seedling"></i> Categorías</h2>
+                <p>Selecciona un tipo de planta</p>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="actions-container">
-                <button class="btn btn-primary" onclick="document.getElementById('image-input').click()">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
-                    </svg>
-                    <span>Seleccionar Imagen</span>
-                </button>
-                <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
-            </div>
-
-            <!-- Info Card -->
-            <div class="info-card">
-                <div class="info-icon">ℹ️</div>
-                <p>Selecciona una foto de tu planta y describe qué has hecho con ella. Nuestros agentes de IA analizarán su salud y te darán recomendaciones personalizadas.</p>
-            </div>
-        </section>
-
-        <!-- Analysis Section -->
-        <section id="analysis-section" class="section">
-            <button class="back-btn" onclick="goBack()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                Volver
-            </button>
-
-            <div class="image-preview-container">
-                <img id="preview-image" src="" alt="Planta" class="preview-image">
-            </div>
-
-            <div id="input-section" class="input-section">
-                <label class="input-label">¿Qué has hecho con tu planta? 🌱</label>
-                <textarea 
-                    id="user-actions" 
-                    class="input-textarea" 
-                    placeholder='Ej: "He estado regando cada día, la tengo cerca de la ventana..."'
-                    rows="4"
-                ></textarea>
-                <button class="btn btn-primary" onclick="analyzePlant()">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-                    </svg>
-                    <span>Analizar Planta</span>
-                </button>
-            </div>
-
-            <!-- Loading -->
-            <div id="loading-section" class="loading-section hidden">
-                <div class="spinner"></div>
-                <p class="loading-text">Analizando tu planta con IA...</p>
-                <p class="loading-subtext">Esto puede tomar unos segundos</p>
-            </div>
-
-            <!-- Results -->
-            <div id="results-section" class="results-section hidden">
-                <!-- Species Card -->
-                <div class="result-card">
-                    <div class="card-header">
-                        <div class="card-icon">🌸</div>
-                        <h3>Identificación</h3>
+            <div class="categories-container">
+                <div class="category-card" data-category="Tropical" onclick="selectCategory('Tropical')">
+                    <div class="category-icon">
+                        <i class="fa-solid fa-seedling"></i>
                     </div>
-                    <h2 class="species-name" id="species-name"></h2>
-                    <p class="common-names" id="common-names"></p>
-                    <div class="confidence-badge">
-                        <span id="confidence"></span>
-                    </div>
+                    <span class="category-name">Tropical</span>
                 </div>
-
-                <!-- Health Card -->
-                <div class="result-card">
-                    <div class="card-header">
-                        <div class="card-icon">💚</div>
-                        <h3>Estado de Salud</h3>
+                <div class="category-card" data-category="Succulents" onclick="selectCategory('Succulents')">
+                    <div class="category-icon">
+                        <i class="fa-solid fa-spa"></i>
                     </div>
-                    <div class="health-score" id="health-score-container"></div>
-                    <p class="health-status" id="health-status"></p>
+                    <span class="category-name">Suculentas</span>
                 </div>
-
-                <!-- Diagnosis Card -->
-                <div class="result-card">
-                    <div class="card-header">
-                        <div class="card-icon">📋</div>
-                        <h3>Diagnóstico</h3>
+                <div class="category-card" data-category="Bonsai" onclick="selectCategory('Bonsai')">
+                    <div class="category-icon">
+                        <i class="fa-solid fa-tree"></i>
                     </div>
-                    <p class="diagnosis-text" id="diagnosis-summary"></p>
-                    <div id="problems-list"></div>
+                    <span class="category-name">Bonsai</span>
                 </div>
-
-                <!-- Recommendations Card -->
-                <div class="result-card">
-                    <div class="card-header">
-                        <div class="card-icon">💡</div>
-                        <h3>Recomendaciones</h3>
+                <div class="category-card" data-category="Pests" onclick="selectCategory('Pests')">
+                    <div class="category-icon">
+                        <i class="fa-solid fa-bug"></i>
                     </div>
-                    <div id="recommendations-list"></div>
+                    <span class="category-name">Plagas</span>
                 </div>
-
-                <button class="btn btn-secondary" onclick="goBack()">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
-                    </svg>
-                    Analizar Otra Planta
-                </button>
+                <div class="category-card" data-category="Indoor" onclick="selectCategory('Indoor')">
+                    <div class="category-icon">
+                        <i class="fa-solid fa-house"></i>
+                    </div>
+                    <span class="category-name">Interior</span>
+                </div>
+                <div class="category-card" data-category="Outdoor" onclick="selectCategory('Outdoor')">
+                    <div class="category-icon">
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                    <span class="category-name">Exterior</span>
+                </div>
             </div>
-        </section>
+
+            <div class="tips-section">
+                <div class="tips-header">
+                    <h3><i class="fa-regular fa-lightbulb"></i> Tips de Cuidado</h3>
+                    <span class="category-badge" id="selectedCategoryBadge">General</span>
+                </div>
+                <div class="tips-container" id="tipsContainer">
+                    <!-- Tips will be dynamically loaded here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Hero Plant 3D Model -->
+        <div class="center-stage">
+            <div class="hero-plant-wrapper">
+                <div class="plant-glow"></div>
+                <div class="plant-3d-container" id="plant3DContainer">
+                    <img src="https://cdn.pixabay.com/photo/2020/05/25/17/21/monstera-5218325_1280.png" 
+                         alt="Hero Plant" 
+                         class="hero-plant-image" 
+                         id="heroPlantImage"
+                         onerror="this.src='hero-plant.png'">
+                </div>
+                <div class="floating-particles">
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                </div>
+            </div>
+            <div class="center-text">
+                <h1 class="gradient-text">PlantCare AI</h1>
+                <p>Identifica, analiza y cuida tus plantas con inteligencia artificial</p>
+            </div>
+        </div>
+
+        <!-- Right Sidebar: Chat Interface -->
+        <aside class="sidebar-right glass-panel">
+            <div class="chat-header">
+                <h2><i class="fa-solid fa-robot"></i> Asistente IA</h2>
+                <p>Sube una imagen y pregunta sobre tu planta</p>
+            </div>
+
+            <!-- Chat History - Smaller Section -->
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome-message">
+                    <div class="welcome-icon">
+                        <i class="fa-solid fa-leaf"></i>
+                    </div>
+                    <h3>¡Hola! Soy tu asistente</h3>
+                    <p>Sube una foto y pregúntame sobre tu planta</p>
+                </div>
+            </div>
+
+            <!-- Chat Input Area - Larger and Dynamic -->
+            <div class="chat-input-area">
+                <div class="image-upload-section" id="imageUploadSection">
+                    <input type="file" id="imageInput" accept="image/*" hidden>
+                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('imageInput').click()">
+                        <div class="upload-content">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <p>Sube una imagen</p>
+                            <span>o arrastra aquí</span>
+                        </div>
+                    </div>
+                    <div class="image-preview-container hidden" id="imagePreviewContainer">
+                        <div class="preview-wrapper-small">
+                            <img id="imagePreview" class="image-preview-small" alt="Vista previa de la imagen de la planta">
+                            <button class="remove-image-btn" onclick="removeImage()" aria-label="Eliminar imagen">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="message-input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        class="message-input" 
+                        placeholder="Escribe tu pregunta sobre la planta..."
+                        rows="2"
+                    ></textarea>
+                    <button class="send-button" id="sendButton" onclick="sendMessage()" aria-label="Enviar mensaje">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
     </div>
 
     <script src="script.js"></script>
 </body>
+
 </html>
