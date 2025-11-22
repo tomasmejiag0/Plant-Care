@@ -1,7 +1,7 @@
 # Documento Técnico – Proyecto Final Introducción a IA
 
 **Proyecto**: PlantCare AI - Asistente Inteligente de Cuidado de Plantas  
-**Equipo**: [Nombre de los estudiantes]  
+**Equipo**: Tomas Mejia - Johan Gomez  
 **Fecha**: Noviembre 2025  
 **Curso**: Introducción a la Inteligencia Artificial
 
@@ -1269,7 +1269,7 @@ PlantCare AI es un ejemplo de cómo conceptos fundamentales de IA pueden combina
 
 ---
 
-**Documento preparado por**: [Nombres de los integrantes del equipo]  
+**Documento preparado por**: Tomas Mejia - Johan Gomez  
 **Fecha**: Noviembre 2025  
 **Versión**: 2.0  
 **Última actualización**: Noviembre 2025
